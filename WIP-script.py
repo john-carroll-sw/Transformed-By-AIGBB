@@ -1,11 +1,13 @@
 import base64
+import json
 import os
 import sys
 import requests
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 from openai import AzureOpenAI
-from bs4 import BeautifulSoup
+from Classes.Activity import Activity
+from Classes.Engagement import Engagement
 
 
 def create_secret_client(keyVaultName):
@@ -15,37 +17,66 @@ def create_secret_client(keyVaultName):
     return SecretClient(vault_url=KVUri, credential=credential)
 
 
-def create_azure_openai_client(secretClient):
-    print("Creating Azure OpenAI Client.")
-    # Azure OpenAI Client Configuration
-    return AzureOpenAI(
-        azure_deployment=secretClient.get_secret("openai-deployment").value,
-        azure_endpoint=secretClient.get_secret("openai-api-base").value,
-        api_key=secretClient.get_secret("openai-api-key").value,
-        api_version=secretClient.get_secret("openai-api-version").value,
-    )
+def retrieve_aoai_client_secrets(secretClient):
+    print("Retrieving Azure OpenAI Client Configuration.")
+    azure_deployment = secretClient.get_secret("openai-deployment").value
+    azure_endpoint = secretClient.get_secret("openai-api-base").value
+    api_key = secretClient.get_secret("openai-api-key").value
+    api_version = secretClient.get_secret("openai-api-version").value
+    return azure_deployment, azure_endpoint, api_key, api_version
 
 
 def retrieve_ado_secrets(secretClient):
     # ADO Secrets
+    print("Retrieving ADO Secrets.")
     pat = secretClient.get_secret("ado-pat").value
     adoOrg = secretClient.get_secret("ado-org").value
     adoProject = secretClient.get_secret("ado-project").value
     return pat, adoOrg, adoProject
 
 
-def build_ado_url_and_headers(adoOrg, adoProject, pat, api_version):
+def create_azure_openai_client(azure_deployment, azure_endpoint, api_key, api_version):
+    print("Creating Azure OpenAI Client.")
+    return AzureOpenAI(
+        azure_deployment=azure_deployment,
+        azure_endpoint=azure_endpoint,
+        api_key=api_key,
+        api_version=api_version,
+    )
+
+
+def build_ado_url_by_id(adoOrg, adoProject, api_version, workItemId):
+    # ADO URL and Headers for single work item request, workItemId is the ID of the work item
+    print("Building ADO URL and Headers for single work item request.")
+    url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/workitems/{workItemId}?{api_version}"
+    return url
+
+
+def build_ado_url_by_wiql(adoOrg, adoProject, api_version):
+    # ADO URL and Headers for WIQL request,  body is the WIQL query
+    print("Building ADO URL and Headers for WIQL request.")
     url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/wiql?api-version={api_version}"
+    return url
+
+
+def build_ado_url_batch(adoOrg, adoProject, api_version):
+    # ADO URL and Headers for batch request, body is a list of work item ID's and fields to return
+    print("Building ADO URL and Headers for batch request.")
+    url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/workitemsbatch?api-version={api_version}"
+    return url
+
+
+def create_ado_headers(pat):
     authorization = str(base64.b64encode(bytes(":" + pat, "ascii")), "ascii")
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
         "Authorization": "Basic " + authorization,
     }
-    return url, headers
+    return headers
 
 
-def retrieve_child_work_item_ids(url, headers, engagementWorkItemId):
+def retrieve_related_work_item_ids(url, headers, engagementWorkItemId):
     payload = {
         "query": f"""
             SELECT [System.Id], [System.Title], [System.WorkItemType] 
@@ -59,7 +90,7 @@ def retrieve_child_work_item_ids(url, headers, engagementWorkItemId):
     }
     response = requests.post(url, headers=headers, json=payload)
 
-    IDS = []
+    ids = []
     # Check if the request was successful
     if response.status_code == 200:
         data = response.json()
@@ -67,47 +98,33 @@ def retrieve_child_work_item_ids(url, headers, engagementWorkItemId):
             for relation in data["workItemRelations"]:
                 if relation["rel"] == "System.LinkTypes.Hierarchy-Forward":
                     target_id = relation["target"]["id"]
-                    IDS.append(target_id)
+                    ids.append(target_id)
         # Remove duplicates using set()
-        IDS = list(set(IDS))
+        ids = list(set(ids))
     else:
         # Print the error message
         print(
             "Request to connect to ADO failed with status code:", response.status_code
         )
         print("Error message:", response.text)
-    return IDS
+    return ids
 
 
-def retrieve_engagement_work_item_content(url, headers, engagementWorkItemId):
-    payload = {
-        "query": f"Select [System.Id], [System.Title], [System.State] From WorkItems Where [System.Id] = {engagementWorkItemId}"
-    }
-    response = requests.post(url, headers=headers, json=payload)
+def retrieve_engagement_content(url, headers):
+    response = requests.get(url, headers=headers)
     # Check if the request was successful
     if response.status_code == 200:
-        # Parse the response JSON
-        data = response.json()
-        content = ""
-        # for workItem in data["value"]:
-        #     content += "Feature: " + workItem["fields"]["System.Title"] + "\n"
-        #     try:
-        #         soup = BeautifulSoup(
-        #             workItem["fields"]["System.Description"], "html.parser"
-        #         )
-        #         span = soup.find("span")
-        #         content += "Description: " + span.text + "\n"
-        #     except:
-        #         pass
-        print(
-            "---------------"
-            + "\n"
-            + "Customer Story will be generated using this content:"
-            + "\n"
-            + "Engagement: "
-            + content
-            + "---------------"
+        data = response.json()  # Parse the response JSON
+        engagementContent = str(Engagement(data))  # Extract the required fields
+        content = (
+            "------------------------------\n"
+            + "Customer Story will be generated using the engagement and the activities' content:\n\n"
+            + "---------------\n"
+            + "Engagement Information: \n"
+            + engagementContent
+            + "---------------\n"
         )
+        print(content)
     else:
         # Print the error message
         print("Request failed with status code:", response.status_code)
@@ -115,36 +132,16 @@ def retrieve_engagement_work_item_content(url, headers, engagementWorkItemId):
     return content
 
 
-def retrieve_child_work_item_content(url, headers, IDS):
-    # Refer to the WIQL Documentation for more information:
-    # https://docs.microsoft.com/en-us/azure/devops/boards/queries/wiql-syntax?view=azure-devops
+def retrieve_activity_content(url, headers, activityIds):
     payload = {
-        "query": f"Select [System.Id], [System.Title], [System.State] From WorkItems Where [System.Id] in {IDS}"
+        "ids": activityIds
     }
     response = requests.post(url, headers=headers, json=payload)
     # Check if the request was successful
     if response.status_code == 200:
-        # Parse the response JSON
-        data = response.json()
-        content = ""
-        # for workItem in data["value"]:
-        #     content += "Feature: " + workItem["fields"]["System.Title"] + "\n"
-        #     try:
-        #         soup = BeautifulSoup(
-        #             workItem["fields"]["System.Description"], "html.parser"
-        #         )
-        #         span = soup.find("span")
-        #         content += "Description: " + span.text + "\n"
-        #     except:
-        #         pass
-        print(
-            "---------------"
-            + "\n"
-            + "Customer Story will be generated using this content:"
-            + "\n"
-            + content
-            + "--------------"
-        )
+        data = response.json()  # Parse the response JSON
+        content = str(Activity(data))  # Extract the required fields
+        print(+"Activity Information: \n" + content + "---------------\n")
     else:
         # Print the error message
         print("Request failed with status code:", response.status_code)
@@ -153,6 +150,8 @@ def retrieve_child_work_item_content(url, headers, IDS):
 
 
 def generate_customer_story(azureOpenAIClient, model, content):
+    # TODO invoke function for prompt compression using LLMLingua: https://github.com/microsoft/LLMLingua
+
     response = azureOpenAIClient.chat.completions.create(
         model=model,
         messages=[
@@ -172,33 +171,46 @@ def generate_customer_story(azureOpenAIClient, model, content):
     )
     print("Customer Story:")
     print(response["choices"][0]["message"]["content"])
+
     # Write customer story to file
     file = open("customer_story.txt", "a")
     file.write(response["choices"][0]["message"]["content"])
+    # TODO Return, then send story to sharepoint page
 
 
 def main():
+    # It all starts with a story ;) - The Customer Engagement Work Item.
+    # TODO Retrieve this ID from some Call to Action: button click -> api call -> runs this function, provides the work item id.
+    engagementWorkItemId = "1353"
+    # 4215, 1353
+
     # 1) Retrieve secrets from Azure Key Vault
     keyVaultName = os.getenv("KEY_VAULT_NAME")
     keyVaultSecretClient = create_secret_client(keyVaultName)
-    azureOpenAIClient = create_azure_openai_client(keyVaultSecretClient)
+    azure_deployment, azure_endpoint, api_key, api_version = (
+        retrieve_aoai_client_secrets(keyVaultSecretClient)
+    )
+    azureOpenAIClient = create_azure_openai_client(
+        azure_deployment, azure_endpoint, api_key, api_version
+    )
     pat, adoOrg, adoProject = retrieve_ado_secrets(keyVaultSecretClient)
-    wiql_api_version = "7.1-preview.2"
-    url, headers = build_ado_url_and_headers(adoOrg, adoProject, pat, wiql_api_version)
+    headers = create_ado_headers(pat)
+    wiql_api_version = "7.0"
 
     # 2) Retrieve content from the Customer Engagement Work Item
-    engagementWorkItemId = "1353"
-    engagementContent = retrieve_engagement_work_item_content(
-        url, headers, engagementWorkItemId
-    )
+    singleWiUrl = build_ado_url_by_id(adoOrg, adoProject, wiql_api_version, engagementWorkItemId)
+    engagementContent = retrieve_engagement_content(singleWiUrl, headers)
 
     # 3) Retrieve the ID's for the ADO work items that are children of the Customer Engagement Work Item
-    IDS = retrieve_child_work_item_ids(url, headers, engagementWorkItemId)
+    relatedWiUrl = build_ado_url_by_wiql(adoOrg, adoProject, wiql_api_version)
+    relatedWorkItemsIds = retrieve_related_work_item_ids(relatedWiUrl, headers, engagementWorkItemId)
+    print(relatedWorkItemsIds)
 
     # 4) Retrieve the content from the related ADO work items
-    content = retrieve_child_work_item_content(url, headers, IDS)
+    batchWiUrl = build_ado_url_batch(adoOrg, adoProject, pat, wiql_api_version)
+    content = retrieve_activity_content(batchWiUrl, headers, relatedWorkItemsIds)
 
-    # # 5) Send Prompt to OpenAI AP
+    # 5) Send Prompt to Azure OpenAI API
     # model = keyVaultSecretClient.get_secret("openai-model").value
     # generate_customer_story(azureOpenAIClient, model, content)
 
