@@ -65,7 +65,7 @@ else:
     print("Error message:", response.text)
     error=True
 
-# 3) Retrive the Tittles and Descriptions of the ADO work items using the ID
+# 3) Retrieve the Titles and Descriptions of the ADO work items using the ID
 if not error:
     print("Release Notes will be generated using the following ADO work items: " + str(IDS))
     # Make the API request - get the work items

@@ -34,31 +34,40 @@ def retrieve_ado_secrets(secretClient):
     return pat, adoOrg, adoProject
 
 
-def retrieve_work_item_ids(pat, adoOrg, adoProject):
+def build_ado_url_and_headers(adoOrg, adoProject, pat, api_version):
+    url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/wiql?api-version={api_version}"
     authorization = str(base64.b64encode(bytes(":" + pat, "ascii")), "ascii")
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
         "Authorization": "Basic " + authorization,
     }
-    query = {
-        "query": "Select [System.Id], [System.Title], [System.State] From WorkItems Where [System.Id] = 4215"
+    return url, headers
+
+
+def retrieve_child_work_item_ids(url, headers, engagementWorkItemId):
+    payload = {
+        "query": f"""
+            SELECT [System.Id], [System.Title], [System.WorkItemType] 
+                FROM WorkItemLinks 
+                WHERE (
+                    [Source].[System.Id] = '{engagementWorkItemId}' AND 
+                    [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward') 
+                ORDER BY [System.Id] 
+                MODE (Recursive)
+        """
     }
-    url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/wiql?api-version=7.1-preview.2"
-    response = requests.post(url, headers=headers, body=query)
+    response = requests.post(url, headers=headers, json=payload)
 
     IDS = []
-    error = False
     # Check if the request was successful
     if response.status_code == 200:
         data = response.json()
-        IDS = []
-        if data["queryType"] == "flat":
-            features = data["workItems"]
-        elif data["queryType"] == "oneHop":
-            features = [feature["target"] for feature in data["workItemRelations"]]
-        for feature in features:
-            IDS.append(feature["id"])
+        if data["queryType"] == "tree":
+            for relation in data["workItemRelations"]:
+                if relation["rel"] == "System.LinkTypes.Hierarchy-Forward":
+                    target_id = relation["target"]["id"]
+                    IDS.append(target_id)
         # Remove duplicates using set()
         IDS = list(set(IDS))
     else:
@@ -67,39 +76,71 @@ def retrieve_work_item_ids(pat, adoOrg, adoProject):
             "Request to connect to ADO failed with status code:", response.status_code
         )
         print("Error message:", response.text)
-        error = True
-    return IDS, error
+    return IDS
 
 
-def retrieve_work_item_content(IDS, pat, adoOrg, adoProject):
-    authorization = str(base64.b64encode(bytes(":" + pat, "ascii")), "ascii")
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": "Basic " + authorization,
+def retrieve_engagement_work_item_content(url, headers, engagementWorkItemId):
+    payload = {
+        "query": f"Select [System.Id], [System.Title], [System.State] From WorkItems Where [System.Id] = {engagementWorkItemId}"
     }
-    payload = {"ids": IDS, "fields": ["System.Title", "System.Description"]}
-    url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/workitemsbatch?api-version=7.0"
     response = requests.post(url, headers=headers, json=payload)
     # Check if the request was successful
     if response.status_code == 200:
         # Parse the response JSON
         data = response.json()
         content = ""
-        for workitem in data["value"]:
-            content += "Feature: " + workitem["fields"]["System.Title"] + "\n"
-            try:
-                soup = BeautifulSoup(
-                    workitem["fields"]["System.Description"], "html.parser"
-                )
-                span = soup.find("span")
-                content += "Description: " + span.text + "\n"
-            except:
-                pass
+        # for workItem in data["value"]:
+        #     content += "Feature: " + workItem["fields"]["System.Title"] + "\n"
+        #     try:
+        #         soup = BeautifulSoup(
+        #             workItem["fields"]["System.Description"], "html.parser"
+        #         )
+        #         span = soup.find("span")
+        #         content += "Description: " + span.text + "\n"
+        #     except:
+        #         pass
         print(
             "---------------"
             + "\n"
-            + "Release Notes will be generated using this content:"
+            + "Customer Story will be generated using this content:"
+            + "\n"
+            + "Engagement: "
+            + content
+            + "---------------"
+        )
+    else:
+        # Print the error message
+        print("Request failed with status code:", response.status_code)
+        print("Error message:", response.text)
+    return content
+
+
+def retrieve_child_work_item_content(url, headers, IDS):
+    # Refer to the WIQL Documentation for more information:
+    # https://docs.microsoft.com/en-us/azure/devops/boards/queries/wiql-syntax?view=azure-devops
+    payload = {
+        "query": f"Select [System.Id], [System.Title], [System.State] From WorkItems Where [System.Id] in {IDS}"
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the response JSON
+        data = response.json()
+        content = ""
+        # for workItem in data["value"]:
+        #     content += "Feature: " + workItem["fields"]["System.Title"] + "\n"
+        #     try:
+        #         soup = BeautifulSoup(
+        #             workItem["fields"]["System.Description"], "html.parser"
+        #         )
+        #         span = soup.find("span")
+        #         content += "Description: " + span.text + "\n"
+        #     except:
+        #         pass
+        print(
+            "---------------"
+            + "\n"
+            + "Customer Story will be generated using this content:"
             + "\n"
             + content
             + "--------------"
@@ -111,14 +152,14 @@ def retrieve_work_item_content(IDS, pat, adoOrg, adoProject):
     return content
 
 
-def generate_release_notes(content):
+def generate_customer_story(azureOpenAIClient, model, content):
     response = azureOpenAIClient.chat.completions.create(
-        model=GPT4T_1106_CHAT_MODEL,
+        model=model,
         messages=[
             {"role": "system", "content": "You are a marketing technical writer"},
             {
                 "role": "user",
-                "content": "Write release notes for this product without using bullet points and all in one paragraph: system capable of generating results from its input",
+                "content": "Write a customer story using this content",
             },
             {
                 "role": "assistant",
@@ -129,10 +170,10 @@ def generate_release_notes(content):
         temperature=0.1,
         max_tokens=4096,
     )
-    print("Release notes:")
+    print("Customer Story:")
     print(response["choices"][0]["message"]["content"])
-    # Write release notes to file
-    file = open("release_notes.txt", "a")
+    # Write customer story to file
+    file = open("customer_story.txt", "a")
     file.write(response["choices"][0]["message"]["content"])
 
 
@@ -142,18 +183,24 @@ def main():
     keyVaultSecretClient = create_secret_client(keyVaultName)
     azureOpenAIClient = create_azure_openai_client(keyVaultSecretClient)
     pat, adoOrg, adoProject = retrieve_ado_secrets(keyVaultSecretClient)
+    wiql_api_version = "7.1-preview.2"
+    url, headers = build_ado_url_and_headers(adoOrg, adoProject, pat, wiql_api_version)
 
-    # 2) Retrieve the ID for the ADO work items with which the Release Notes will be created using an ADO query
-    IDS, error = retrieve_work_item_ids(pat, adoOrg, adoProject)
+    # 2) Retrieve content from the Customer Engagement Work Item
+    engagementWorkItemId = "1353"
+    engagementContent = retrieve_engagement_work_item_content(
+        url, headers, engagementWorkItemId
+    )
 
-    # 3) Retrieve the Titles and Descriptions of the ADO work items using the ID
-    if not error:
-        content = retrieve_work_item_content(IDS, pat, adoOrg, adoProject)
+    # 3) Retrieve the ID's for the ADO work items that are children of the Customer Engagement Work Item
+    IDS = retrieve_child_work_item_ids(url, headers, engagementWorkItemId)
 
-        # 4) Send Prompt to OpenAI API using the Titles and Descriptions of the ADO work items
-        generate_release_notes(content)
-    else:
-        print("error")
+    # 4) Retrieve the content from the related ADO work items
+    content = retrieve_child_work_item_content(url, headers, IDS)
+
+    # # 5) Send Prompt to OpenAI AP
+    # model = keyVaultSecretClient.get_secret("openai-model").value
+    # generate_customer_story(azureOpenAIClient, model, content)
 
 
 if __name__ == "__main__":
