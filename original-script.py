@@ -1,3 +1,4 @@
+# https://medium.com/@petermkowalchuk/effortless-release-notes-generation-with-azure-devops-and-openai-a-powerful-solution-for-busy-pm-911a9d1331c5
 # Peter Kowalchuk. 2023
 
 import os

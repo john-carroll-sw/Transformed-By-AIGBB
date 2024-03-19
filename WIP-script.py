@@ -46,22 +46,22 @@ def create_azure_openai_client(azure_deployment, azure_endpoint, api_key, api_ve
 
 
 def build_ado_url_by_id(adoOrg, adoProject, api_version, workItemId):
-    # ADO URL and Headers for single work item request, workItemId is the ID of the work item
-    print("Building ADO URL and Headers for single work item request.")
+    # ADO URL for single work item request, workItemId is the ID of the work item
+    print("Building ADO URL for single work item request.")
     url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/workitems/{workItemId}?{api_version}"
     return url
 
 
 def build_ado_url_by_wiql(adoOrg, adoProject, api_version):
-    # ADO URL and Headers for WIQL request,  body is the WIQL query
-    print("Building ADO URL and Headers for WIQL request.")
+    # ADO URL for WIQL request,  body is the WIQL query
+    print("Building ADO URL for WIQL request.")
     url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/wiql?api-version={api_version}"
     return url
 
 
 def build_ado_url_batch(adoOrg, adoProject, api_version):
-    # ADO URL and Headers for batch request, body is a list of work item ID's and fields to return
-    print("Building ADO URL and Headers for batch request.")
+    # ADO URL for batch request, body is a list of work item ID's and fields to return
+    print("Building ADO URL for batch request.")
     url = f"https://dev.azure.com/{adoOrg}/{adoProject}/_apis/wit/workitemsbatch?api-version={api_version}"
     return url
 
@@ -140,8 +140,15 @@ def retrieve_activity_content(url, headers, activityIds):
     # Check if the request was successful
     if response.status_code == 200:
         data = response.json()  # Parse the response JSON
-        content = str(Activity(data))  # Extract the required fields
-        print(+"Activity Information: \n" + content + "---------------\n")
+        content = "\nActivity Information: \n"
+        for item in data["value"]:
+            content += (
+                "\n"
+                + str(Activity(item))  # Extract the required fields
+                + "---------------\n"
+            )
+        
+        print(content)
     else:
         # Print the error message
         print("Request failed with status code:", response.status_code)
@@ -187,12 +194,8 @@ def main():
     # 1) Retrieve secrets from Azure Key Vault
     keyVaultName = os.getenv("KEY_VAULT_NAME")
     keyVaultSecretClient = create_secret_client(keyVaultName)
-    azure_deployment, azure_endpoint, api_key, api_version = (
-        retrieve_aoai_client_secrets(keyVaultSecretClient)
-    )
-    azureOpenAIClient = create_azure_openai_client(
-        azure_deployment, azure_endpoint, api_key, api_version
-    )
+    azure_deployment, azure_endpoint, api_key, api_version = (retrieve_aoai_client_secrets(keyVaultSecretClient))
+    azureOpenAIClient = create_azure_openai_client(azure_deployment, azure_endpoint, api_key, api_version)
     pat, adoOrg, adoProject = retrieve_ado_secrets(keyVaultSecretClient)
     headers = create_ado_headers(pat)
     wiql_api_version = "7.0"
@@ -207,8 +210,8 @@ def main():
     print(relatedWorkItemsIds)
 
     # 4) Retrieve the content from the related ADO work items
-    batchWiUrl = build_ado_url_batch(adoOrg, adoProject, pat, wiql_api_version)
-    content = retrieve_activity_content(batchWiUrl, headers, relatedWorkItemsIds)
+    batchWiUrl = build_ado_url_batch(adoOrg, adoProject, wiql_api_version)
+    activityContent = retrieve_activity_content(batchWiUrl, headers, relatedWorkItemsIds)
 
     # 5) Send Prompt to Azure OpenAI API
     # model = keyVaultSecretClient.get_secret("openai-model").value
