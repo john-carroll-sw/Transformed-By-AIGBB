@@ -52,7 +52,7 @@ def main():
     ado_metaprompt = ''
     # It all starts with a story ;) - The Customer Engagement Work Item.
     # TODO Retrieve this ID from some Call to Action: button click -> api call -> runs this function, provides the work item id.
-    engagementWorkItemId = "1036"
+    engagementWorkItemId = "3428"
 
     # 1) Retrieve secrets from Azure Key Vault
     keyVaultName = os.getenv("KEY_VAULT_NAME")

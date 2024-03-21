@@ -140,3 +140,5 @@ outputs/
 Test/
 
 Classes/__pycache__/
+frontend/node_modules/.bin/
+**/node_modules/

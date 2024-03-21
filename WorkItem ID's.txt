@@ -1,0 +1,6 @@
+RELX = 4215, 
+Altria = 1353, 
+CSX = 706, 
+Starbucks = 548, 
+KFC = 1036
+Target = 3428
