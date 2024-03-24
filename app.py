@@ -28,7 +28,7 @@ bp = Blueprint("routes", __name__, static_folder="static", template_folder="stat
 MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION="2024-02-15-preview"
 
 # UI configuration (optional)
-UI_TITLE = os.environ.get("UI_TITLE") or "Transformed by AI"
+UI_TITLE = os.environ.get("UI_TITLE") or "Contoso"
 UI_LOGO = os.environ.get("UI_LOGO")
 UI_CHAT_LOGO = os.environ.get("UI_CHAT_LOGO")
 UI_CHAT_TITLE = os.environ.get("UI_CHAT_TITLE") or "Start chatting"
@@ -484,14 +484,21 @@ def get_configured_data_source():
 
     return data_source
 
+def read_system_prompt():
+    with open("system_prompt.txt", "r") as file:
+        system_prompt = file.read()
+    return system_prompt
+
 def prepare_model_args(request_body):
     request_messages = request_body.get("messages", [])
+    system_prompt = read_system_prompt()
+
     messages = []
     if not SHOULD_USE_DATA:
         messages = [
             {
                 "role": "system",
-                "content": AZURE_OPENAI_SYSTEM_MESSAGE
+                "content": system_prompt
             }
         ]
 
@@ -952,8 +959,9 @@ async def generate_title(conversation_messages):
         response = await azure_openai_client.chat.completions.create(
             model=AZURE_OPENAI_MODEL,
             messages=messages,
-            temperature=1,
-            max_tokens=64
+            temperature=0.7,
+            top_p=0.7,
+            max_tokens=4096
         )
         
         title = json.loads(response.choices[0].message.content)['title']

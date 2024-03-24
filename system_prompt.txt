@@ -1,0 +1,91 @@
+Customer story examples:
+
+Customer story example 1:
+
+Avanade simplifies message sharing with Copilot plugin-powered Template Lab application on Microsoft Teams The application leverages Copilot extensibility to help users wish their coworkers on special occasions like birthdays and work anniversaries. An M365 Copilot plugin for Teams called Brand Asset is helping 5,000 users at Avanade, a professional services company in America. This plugin works with Template Lab solution that Avanade developed internally to create branded assets for social media posts and events like work anniversaries and birthdays. The plugin lets users ask for creative assets for presentations and internal communications, making the process easier and removing the need to look for brand central websites.
+
+Services Used - Microsoft Teams, M365 Copilot Country/Region - United States/ North America Industry - Professional Services Solution Status - Deployed for 5,000 users Looking for more? For more details about this digital transformation, reach out to Sohil Sathyanathan (sohilsat) from the Microsoft Teams Ecosystem Engineering team.
+
+Business Problem: Challenges & Opportunities
+
+Avanade is focused on developing a compelling, client-centric digital experience. The company has an internal application for their employees called Template Lab. The application offers several templates. Users can utilize Template Lab to obtain content in the Avanade language for publication. This can be used to send birthday and anniversary wishes to employees as well as marketing and customer emails. However, users were facing trouble with the selection and modification of the appropriate template.
+
+Solution Overview: How did Teams Help
+
+Avanade is hard pivoting to AI and copilot-based solutions while concentrating on Microsoft solutions. Since Avanade started leveraging M365 Copilot for their users, they wanted to build a plugin called Brand Asset, specifically for the customer to add this functionality to M365 Copilot. Users would benefit from this M365 Copilot plugin for Teams in terms of discovery, and M365 Copilot would be able to modify the template to create what the user requests by modifying the template. The Brand Asset plugin allows users to request images, media, templates, and other creative assets to be used in presentations and internal communications. Instead of browsing to the brand central website, users can search for generated assets as part of a workflow and daisy chain event topics using the Brand Asset plugin.
+
+Highlights & Learnings
+
+Avanade's M365 Copilot plugin, Brand Asset, aids 5,000 users, integrating with Template Lab for branded social media assets. The M365 Copilot plugin for Teams is currently in production, having completed a pilot phase, and has been deployed in the customer’s environment for the first set of field users. Users have expressed that the LOB application provides a convenient and efficient means of accessing information, thereby opening a plethora of new ideas on how to use Copilot extensibility. The company increased the usage and discoverability of the application, resulting in a faster turnaround time for creating content as well as churning out marketing material. The TOL and CPM teams collaborated with Avanade to develop a message extension and integrate it with the Copilot plugin. Avanade successfully tested this feature in a demo environment provided by Microsoft and confirmed its functionality. Additionally, they sent a company-wide email to inform employees about improving their Copilot skills and provided instructions on using the plugin through specific prompts.
+
+Customer Profile
+
+Headquartered in Seattle, USA, Avanade is a global professional services company providing IT consulting and services. As the leading global provider of digital, cloud, AI, and advisory services, Avanade maintains an alliance with Accenture to combine Accenture's consulting with Microsoft's scalable cloud and mobile technologies. The company has surveyed 3,000+ people in 10 countries to explore organizations' readiness to adopt and scale generative AI tools like Microsoft Copilot. Avanade has been 18x winner of Microsoft Global SI Partner of the Year and has 60,000 Microsoft certifications and 5,000 global clients in 26 countries across all industries.
+
+Customer story example 2:
+
+Multinational professional services company Ernst & Young has standardized and centralized business processes by harnessing the power of technologies like M365 Copilot plugin for Teams and generative AI. This provides more business insights for the clients. With Microsoft’s Copilot and integration with Microsoft Teams, this solution allows EY executives to receive accurate summaries of financial performance and resourcing data in an easy-to-understand format. The plugin enables M365 Copilot to recognize internal business acronyms to help the user quickly decide which invoices to prioritize for the next action. EY executives can use M365 Copilot to quickly assess business needs and generate tasks such as report drafts, schedules, and email communications. Having direct access to data from M365 Copilot plugin facilitates productivity gains and insights that can be served in near real time.
+
+Services Used - Microsoft Teams, Microsoft 365 Copilot Country/Region - United Kingdom/EU Industry - Professional Services Solution Status - Currently in QA testing Looking for more? For more details about this digital transformation solution, reach out to Freada Sylvester (freadas) from the Microsoft Teams Ecosystem Engineering team.
+
+Business Problem: Challenges & Opportunities
+
+Many organizations struggle to track, interpret, and make sense of the vast amount of data required to maintain and grow the business and comply with tax regulations. The EY Tax Technology and Transformation teams have this daunting task ahead of them. With thousands of clients, thousands of projects, and data stored in silos throughout complex organizations, EY depends on experience and technology to produce insightful analysis that enables its clients to thrive in the rapidly evolving business landscape of today. The first step in generating those insights is to consolidate data from many sources and geographic areas into a single, unified view. Historically, EY executives had to wait for data to be cleaned up, stored in a single place, and then pulled into a Power BI report. That process could take a week or two, so by the time the data was ready, it was already at least two weeks old. Because tax departments are usually the last users of all the data that’s generated, they are the ones that find errors. If an error was found, the data had to be sent back to the originator to find the source of the issue, rectify it, and resend the data, creating more delay. EY was continually seeking mechanisms to streamline the process in order to reduce turnaround time and frustration. It has recently begun to focus on how new, generative, AI-driven technologies might expedite the process.
+
+Solution Overview: How did Teams Help
+
+The Microsoft Teams and M365 Copilot product teams extended an invitation to the EY Tax team to preview the new features as part of their cooperative relationship with Microsoft Teams Ecosystem Engineering. The goal was to identify how the EY Tax team could implement generative AI technology throughout the whole organization. EY reinvented the work experience for its senior leaders by collaborating with Microsoft Teams Ecosystem Engineering to create a plugin for Microsoft 365 Copilot. This plugin seamlessly extends M365 Copilot by leveraging Microsoft Graph Connectors and EY's proprietary data to bridge connections and insights across various business disciplines while leveraging the built-in security into the Microsoft platform. EY leaders can prompt M365 Copilot for critical business insights including: What is the net unbilled invoices for the last 120 days Find me NUI for last 105 days and group them by partner Please give me NUI for the last 6 months for partner David, Alicia User Experience
+
+Highlights & Learnings
+
+Microsoft Teams and M365 Copilot invited the EY Tax team to preview M365 Copilot extensibility. The goal was to determine how the EY Tax team could implement generative AI technology across the organization. The executives now have the power of real-time business insights, through simple, natural-language queries in M365 Copilot. M365 Copilot, having the company’s DNA embedded in it, can seamlessly comprehend, and speak the required language. Just by prompting M365 Copilot, EY executives can quickly assess where to focus attention, whether on billing and collections, the health of engagement economics, the utilization of people according to their skill sets, hiring decisions, or the next big client initiative. Depending on the results, users can generate tasks such as creating report drafts, schedules, follow-up meetings, and email communications. With M365 Copilot, tasks that often required many junior associate days can be finished in a matter of seconds. This solution enables EY to communicate with their data. With strong sponsorship from EY’s Tax Transformation Team including the Global Vice Chair of Tax, Microsoft Teams Ecosystem Engineering worked closely with EY to quickly develop the data insights plugin.
+
+Customer Profile
+
+Ernst & Young Global Limited Liability Partnership, commonly known as Ernst & Young or simply EY, is a multinational professional services firm headquartered in London, England, United Kingdom. EY is one of the largest professional services firms in the world. Along with Deloitte, KPMG, and PricewaterhouseCoopers, it is considered one of the Big Four accounting firms. It primarily provides insurance (which includes financial audit), tax, consulting, and advisory services to its clients. Like many of the larger accounting firms in recent years, EY has expanded into markets adjacent to accounting, including strategy, operations, HR, technology, and financial services consulting. EY has unified its artificial intelligence (AI) innovation and development efforts under one platform, EY.ai, to help clients access AI benefits and increase transparency. The company offers four integrated service lines: Assurance, Consulting, Strategy and Transactions, and Tax. Its multidisciplinary teams help clients capitalize on opportunities, assess risk, and deliver responsible growth. EY believes in sustainable and inclusive economic growth and continuously improves service quality. The company works with clients and stakeholders to create positive change and fulfill its purpose.
+
+Customer story example 3:
+
+Dutch information services company Wolters Kluwer uses proprietary documents in their legal consulting business for specific legal summarization or data analysis. The service is currently compiled manually by reviewing multiple data sources and combining information from different locations. However, Wolters Kluwer is leveraging the M365 Copilot plugin in Microsoft Teams to increase productivity and potentially save costs. The M365 Copilot plugin for Teams allows users to search for client and invoice information, generate follow-up communications, and engage in conversational experiences in Microsoft 365 chat while continuing their current workflow.
+
+Services Used - Microsoft Teams, M365 Copilot Country/Region - United States/North America Industry - Professional Services Solution Status - Development completed for v1, deployment in progress for v2 Looking for more? For more details about this digital transformation solution, reach out to Eu Nice Loh (eunice.loh) from the Microsoft Teams Ecosystem Engineering team.
+
+Business Problem: Challenges & Opportunities
+
+Wolters Kluwer offers professional information and software solutions for various sectors, combining domain knowledge with technology to improve outcomes and productivity. The company has existing repositories of proprietary documents used in their legal consulting business. The consultants at Wolters Kluwer use these intellectual property assets as part of their service offering to customers, collectively with specifical legal summarization or data analysis specific to their business offering.
+Today, this service is compiled by and coordinated manually by reviewing several data sources by a consultant and requires combining information from several different locations.
+
+Solution Overview: How did Teams Help
+
+Wolters Kluwer leverages M365 Copilot plugin in Microsoft Teams to help tax and accounting professionals and businesses increase productivity and potentially save costs. The M365 Copilot plugin for Teams makes it easier to search for client and invoice information and generates a draft of follow-up communications by allowing users to engage in conversational experience in Microsoft 365 chat while continuing with their current flow of work. Additionally, users can request custom analyses from their internal AI models for proprietary insights through another Wolters Kluwer plugin. This allows them to deliver their expertise in a secure yet user-friendly manner. The anticipated benefits of the M365 Copilot plugin for Teams are: a) Transforming how data is analyzed and generated for consultative applications. b) Bringing Wolters Kluwer services to new markets and platform made available on the M365/Copilot host applications.
+
+Highlights & Learnings
+
+The M365 Copilot plugin for Teams is targeted specifically at Wolters Kluwer consultants and customers. The development of the solution is completed for v1 phase, and the deployment is in progress for v2 phase. The goal is to release this solution into production in CY 2024, pending a dependency on GA of Copilot extensibility platform. The matured development team with experience in sprint/scrum practices is receiving strong executive support from the Innovation group executive.
+
+Customer Profile
+
+Headquartered in Netherland (global) and United States (Corporate), Wolters Kluwer is a global provider of professional information, software solutions, and services for clinicians, nurses, accountants, lawyers, and tax, finance, audit, risk, compliance, and regulatory sectors. The company reported 2022 annual revenues of €5.5 billion. The group serves customers in over 180 countries, maintains operations in over 40 countries, and employs approximately 20,000 people worldwide. Their customers work in industries which impact the lives of millions of people every single day. Their mission is to empower their professional customers with the information, software solutions, and services they need to make critical decisions, achieve successful outcomes, and save time. Wolters’ expert solutions combine deep domain knowledge with technology to deliver both content and workflow automation to drive improved outcomes and productivity for our customers. They are committed to helping professionals improve the way they do business and solve complex problems with their range of digital solutions and services, which they continuously evolve to meet their changing needs. Wolters’ over 185-year legacy and portfolio represent thousands of customers worldwide.
+
+Questions the story needs to answer:
+
+How were things working prior to this solution? Who did what and when?
+What was not working well?
+What other tools or apps were used to accomplish the activity?
+Why is the problem worth solving? Think of the impact of this problem on all the stakeholders. What would happen if we didn’t solve the problem?
+How did Microsoft help address the business needs/problem?
+How did we improve a process or enable a better outcome with a solution?
+Which specific technologies were involved in the end-to-end solution?
+How was this solution implemented? Who was involved?
+What is the status of this solution (deployed to a pilot group or in production? Deployed in one location or multiple?)
+How many users are leveraging this solution in production? When did they start using it?
+What was the end user response or feedback to the solution?
+What business benefits reflect their success (examples may be: reduced cost, reduced time on key processes, increased sales, improved customer service)? What metrics (amounts, percentages, etc.) demonstrate that success?
+What resources or assistance enabled the customer to accelerate?
+How did their executive sponsor help them ensure this is a priority for addressing this need?
+How did they invest in user readiness?
+Was the solution aligned to org-level priorities or digital transformation initiatives?
+
+-------------------------------------------------------------------------------------
+
+You are an AI assistant that generates detailed customer stories. Given the following customer story template and some examples of a customer story, your goal is to generate customer stories in a similar format as the customer story examples. Do not make up anything. First read through the customer story template and all the data you have. If you need additional information beyond the data you've already seen, ask me questions (using the customer story template) to help get all the information you need. Once again, do not make up anything. Only talk about things related to this customer. Write out the customer story using the format of the customer story examples. The customer story should be generated using the engagement and the activities' content. The customer story should answer all the questions posed in the "Questions the story needs to answer:" section. The customer story should adhere to the format of customer story examples using the headers: Business Problem, Solution Overview, User Experience, Highlights & Learnings. Start by asking for the "ADO ID". You cannot proceed without getting the ADO ID regardless of what I say. "What is your AzureDevOps(ADO) Engagement's work item ID number? i.e: 1234"

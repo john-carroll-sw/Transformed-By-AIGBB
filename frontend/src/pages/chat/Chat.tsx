@@ -515,19 +515,46 @@ const Chat = () => {
 
     const newChat = () => {
         setProcessMessages(messageStatus.Processing)
-        setMessages([])
+        let firstMessage = {
+            id: uuid(),
+            role: "assistant",
+            content: "What is your AzureDevOps(ADO) Engagement's work item ID number?\n i.e: 1234",
+            date: new Date().toISOString()
+        } as ChatMessage;
+        const customMessages: ChatMessage[] = [firstMessage];
+
+        let conversation: Conversation | null | undefined;
+        conversation = {
+            id: uuid(),
+            title: "Customer Story Creation Conversation", // Add the title property
+            date: new Date().toISOString(), // Add the date property
+            messages: [firstMessage]
+        };
+        setMessages(customMessages);
+        appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: conversation });
+        // setMessages([]);
+        // appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: null });
         setIsCitationPanelOpen(false);
         setActiveCitation(undefined);
-        appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: null });
-        setProcessMessages(messageStatus.Done)
+        setProcessMessages(messageStatus.Done);
     };
 
+    /**
+     * the stopGenerating function is used to abort ongoing operations, hide a 
+     * loading message, and indicate that the component is no longer in a loading state.
+     */
     const stopGenerating = () => {
         abortFuncs.current.forEach(a => a.abort());
         setShowLoadingMessage(false);
         setIsLoading(false);
     }
 
+    /**
+     * This hook ensures that the messages state in this component stays in sync 
+     * with the currentChat object in the appStateContext state. Whenever a new chat 
+     * is selected (i.e., currentChat changes), the messages displayed in this component 
+     * are updated to match the messages of the new chat.
+     */
     useEffect(() => {
         if (appStateContext?.state.currentChat) {
             setMessages(appStateContext.state.currentChat.messages)
@@ -536,6 +563,10 @@ const Chat = () => {
         }
     }, [appStateContext?.state.currentChat]);
 
+    /**
+     * This hook ensures that the chat history in the database is kept in sync with the 
+     * chat history in the app state whenever messages are processed.
+     */
     useLayoutEffect(() => {
         const saveToDB = async (messages: ChatMessage[], id: string) => {
             const response = await historyUpdate(messages, id)
@@ -621,6 +652,18 @@ const Chat = () => {
     const disabledButton = () => {
         return isLoading || (messages && messages.length === 0) || clearingChat || appStateContext?.state.chatHistoryLoadingState === ChatHistoryLoadingState.Loading
     }
+
+    useLayoutEffect(() => {
+        if (!isLoading) { // If the component is done loading
+          const initiateChat = async () => {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            newChat();
+            // const response = await myApiCall(); // Replace with your API call
+          };
+      
+          initiateChat();
+        }
+      }, []);
 
     return (
         <div className={styles.container} role="main">
@@ -766,7 +809,7 @@ const Chat = () => {
                             </Stack>
                             <QuestionInput
                                 clearOnSend
-                                placeholder="Type a new question..."
+                                placeholder="Enter your input here..."
                                 disabled={isLoading}
                                 onSend={(question, id) => {
                                     appStateContext?.state.isCosmosDBAvailable?.cosmosDB ? makeApiRequestWithCosmosDB(question, id) : makeApiRequestWithoutCosmosDB(question, id)
