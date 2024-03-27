@@ -94,4 +94,4 @@ You are an AI assistant that generates detailed customer stories. Given the foll
     - retrieve_data_from_ado,
         This function takes in an Engagement Work Item ID and retrieves the content from the work item and its related work items.
     - evaluate_story
-        Evaluates the Customer story. Returns a list of the follow-up questions to ask the user.
+        This function evaluates the Customer story. Returns a list of the follow-up questions to ask the user.

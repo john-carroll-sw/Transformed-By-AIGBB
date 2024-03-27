@@ -13,7 +13,7 @@ from quart import (
     send_from_directory,
     render_template
 )
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, AzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
@@ -111,6 +111,7 @@ AZURE_OPENAI_MAX_TOKENS = os.environ.get("AZURE_OPENAI_MAX_TOKENS", 1000)
 AZURE_OPENAI_STOP_SEQUENCE = os.environ.get("AZURE_OPENAI_STOP_SEQUENCE")
 AZURE_OPENAI_SYSTEM_MESSAGE = os.environ.get("AZURE_OPENAI_SYSTEM_MESSAGE", "You are an AI assistant that helps people find information.")
 AZURE_OPENAI_PREVIEW_API_VERSION = os.environ.get("AZURE_OPENAI_PREVIEW_API_VERSION", MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION)
+AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION)
 AZURE_OPENAI_STREAM = os.environ.get("AZURE_OPENAI_STREAM", "true")
 AZURE_OPENAI_MODEL = os.environ.get("AZURE_OPENAI_MODEL", "gpt-35-turbo-16k") # Name of the model, e.g. 'gpt-35-turbo-16k' or 'gpt-4'
 AZURE_OPENAI_EMBEDDING_ENDPOINT = os.environ.get("AZURE_OPENAI_EMBEDDING_ENDPOINT")
@@ -263,7 +264,7 @@ def init_openai_client(use_data=SHOULD_USE_DATA):
         }
 
         azure_openai_client = AsyncAzureOpenAI(
-            api_version=AZURE_OPENAI_PREVIEW_API_VERSION,
+            api_version=AZURE_OPENAI_API_VERSION,
             api_key=aoai_api_key,
             azure_ad_token_provider=ad_token_provider,
             default_headers=default_headers,
@@ -583,26 +584,40 @@ def retrieve_data_from_ado(engagementWorkItemId):
 
     return ado_metaprompt
 
-async def evaluate_story():
+def evaluate_story(story):
     system_prompt = read_evaluation_prompt()
     messages = [
         {
             "role": "system",
-            "content": system_prompt
+            "content": f"Story:\n{story}\n\n{system_prompt} "
         }
     ]
-    azure_openai_client = init_openai_client()
-    response = await azure_openai_client.chat.completions.create(
+    azure_openai_client = AzureOpenAI(
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_key=AZURE_OPENAI_API_KEY,
+        api_version=AZURE_OPENAI_API_VERSION,
+    )
+    response = azure_openai_client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT_NAME,
         messages=messages,
         temperature=1,
         max_tokens=4096,
         top_p=0.95,
     )
-    return response
+
+    follow_up_questions = response.choices[0].message.content
+
+    # This prompt will be used to ask the user all of follow-up questions at once in the next response from the assistant
+    # prompt = f"Repeat the following in the next response:\n{follow_up_questions}"
+
+    # This prompt will be used to ask the user one question at a time in the next response from the assistant
+    prompt = f"Notify the user that you have finished evaluating the customer story and you have some follow up questions that would help make the story more comprehensive, then proceed to ask the user one question at a time from these follow_up_questions:\n\n{follow_up_questions}"
+    
+    return prompt
+
 
 # List of tools available to the model
-def getTools():
+def get_tools():
     return [
         {
             "type": "function",
@@ -626,7 +641,16 @@ def getTools():
             "function": {
                 "name": "evaluate_story",
                 "description": "Evaluates the Customer story. Returns a list of the follow-up questions to ask the user.",
-                "parameters": {"type": "object", "properties": {}},
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "story": {
+                            "type": "string",
+                            "description": "The customer story to evaluate.",
+                        }
+                    },
+                    "required": ["story"],
+                },
             },
         }
     ]
@@ -640,7 +664,7 @@ async def handle_chat_request(request):
     response = await azure_openai_client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT_NAME,
         messages=messages,
-        tools=getTools(),
+        tools=get_tools(),
         tool_choice="auto",
         temperature=1,
         max_tokens=4096,
@@ -656,7 +680,10 @@ async def handle_chat_request(request):
         messages.append({"role": "assistant", "content": bot_response})
     else:
         messages.append(response_message)  # extend conversation with assistant's reply
-        available_functions = { "retrieve_data_from_ado": retrieve_data_from_ado }
+        available_functions = { 
+            "retrieve_data_from_ado": retrieve_data_from_ado, 
+            "evaluate_story": evaluate_story
+        }
         
         for tool_call in tool_calls:
 
@@ -682,7 +709,7 @@ async def handle_chat_request(request):
 
         second_response = await azure_openai_client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=messages,
+            messages=messages
         )  # get a new response from the model where it can see the function response
         second_response_message = second_response.choices[0].message
         second_bot_response = second_response_message.content

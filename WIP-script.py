@@ -1,28 +1,27 @@
 import os
 import requests
 from openai import AzureOpenAI
-from Classes.Activity import Activity
-from Classes.Comment import Comment
-from Classes.Engagement import Engagement
-from Utils import Secret_Manager
-from Utils import ADO_Utilities
+from classes.Activity import Activity
+from classes.Comment import Comment
+from classes.Engagement import Engagement
+from utils import Secret_Manager
+from utils import ADO_Utilities
 
 
-def create_azure_openai_client(azure_deployment, azure_endpoint, api_key, api_version):
+def create_azure_openai_client(azure_endpoint, api_key, api_version):
     print("Creating Azure OpenAI Client.")
     return AzureOpenAI(
-        azure_deployment=azure_deployment,
         azure_endpoint=azure_endpoint,
         api_key=api_key,
         api_version=api_version,
     )
 
 
-def generate_customer_story(azureOpenAIClient, model, content):
+def generate_customer_story(azureOpenAIClient, azure_deployment, content):
     # TODO invoke function for prompt compression using LLMLingua: https://github.com/microsoft/LLMLingua
 
     response = azureOpenAIClient.chat.completions.create(
-        model=model,
+        model=azure_deployment,
         messages=[
             {"role": "system", "content": "You are a marketing technical writer"},
             {
@@ -58,7 +57,7 @@ def main():
     keyVaultName = os.getenv("KEY_VAULT_NAME")
     keyVaultSecretClient = Secret_Manager.create_secret_client(keyVaultName)
     azure_deployment, azure_endpoint, api_key, api_version = (Secret_Manager.retrieve_aoai_client_secrets(keyVaultSecretClient))
-    azureOpenAIClient = create_azure_openai_client(azure_deployment, azure_endpoint, api_key, api_version)
+    azureOpenAIClient = create_azure_openai_client(azure_endpoint, api_key, api_version)
     pat, adoOrg, adoProject = Secret_Manager.retrieve_ado_secrets(keyVaultSecretClient)
     headers = ADO_Utilities.create_ado_headers(pat)
     wiql_api_version = "7.0"
@@ -79,7 +78,7 @@ def main():
 
     # 5) Send Prompt to Azure OpenAI API
     # model = keyVaultSecretClient.get_secret("openai-model").value
-    # generate_customer_story(azureOpenAIClient, model, content)
+    # generate_customer_story(azureOpenAIClient, azure_deployment, content)
 
     print(ado_metaprompt)
 
