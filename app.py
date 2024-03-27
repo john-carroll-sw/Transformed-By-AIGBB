@@ -122,6 +122,7 @@ AZURE_OPENAI_MODEL = os.environ.get("AZURE_OPENAI_MODEL", "gpt-35-turbo-16k") # 
 AZURE_OPENAI_EMBEDDING_ENDPOINT = os.environ.get("AZURE_OPENAI_EMBEDDING_ENDPOINT")
 AZURE_OPENAI_EMBEDDING_KEY = os.environ.get("AZURE_OPENAI_EMBEDDING_KEY")
 AZURE_OPENAI_EMBEDDING_NAME = os.environ.get("AZURE_OPENAI_EMBEDDING_NAME", "")
+USE_LLMLINGUA_PROMPT_COMPRESSION = os.environ.get("USE_LLMLINGUA_PROMPT_COMPRESSION", "false").lower() == "true"
 
 # CosmosDB Mongo vcore vector db Settings
 AZURE_COSMOSDB_MONGO_VCORE_CONNECTION_STRING = os.environ.get("AZURE_COSMOSDB_MONGO_VCORE_CONNECTION_STRING")  #This has to be secure string
@@ -205,6 +206,17 @@ frontend_settings = {
     },
     "sanitize_answer": SANITIZE_ANSWER
 }
+
+if USE_LLMLINGUA_PROMPT_COMPRESSION:
+    from llmlingua import PromptCompressor
+    # llm_lingua = PromptCompressor("TheBloke/Llama-2-7b-Chat-GPTQ", model_config={"revision": "main"})
+    llm_lingua = PromptCompressor(
+        model_name="NousResearch/Llama-2-7b-hf", # Default model
+        device_map="cpu", # Device environment (e.g., 'cuda', 'cpu', 'mps')
+        model_config={}, # Configuration for the Huggingface model
+        open_api_config={}, # Configuration for OpenAI Embedding
+    )
+
 
 def should_use_data():
     global DATASOURCE_TYPE
@@ -501,15 +513,32 @@ def get_configured_data_source():
 
     return data_source
 
+def compress_prompt(system_prompt):
+    # NOTE https://github.com/microsoft/LLMLingua
+
+    compressed_prompt = llm_lingua.compress_prompt(system_prompt)
+    
+    return compressed_prompt
+
 def read_system_prompt():
     with open("system_prompt.txt", "r") as file:
         system_prompt = file.read()
-    return system_prompt
+        
+    if USE_LLMLINGUA_PROMPT_COMPRESSION:
+        compressed_prompt = compress_prompt(system_prompt)
+        return compressed_prompt
+    else:
+        return system_prompt
 
 def read_evaluation_prompt():
     with open("evaluation_prompt.txt", "r") as file:
         evaluation_prompt = file.read()
-    return evaluation_prompt
+    
+    if USE_LLMLINGUA_PROMPT_COMPRESSION:
+        compressed_prompt = compress_prompt(evaluation_prompt)
+        return compressed_prompt
+    else:
+        return evaluation_prompt
 
 def prepare_model_args(request_body):
     request_messages = request_body.get("messages", [])
