@@ -1,11 +1,8 @@
 import os
-import requests
+
 from openai import AzureOpenAI
-from classes.Activity import Activity
-from classes.Comment import Comment
-from classes.Engagement import Engagement
-from utils import Secret_Manager
-from utils import ADO_Utilities
+from backend import Secret_Manager
+from backend import ADO_Utilities
 
 
 def create_azure_openai_client(azure_endpoint, api_key, api_version):
@@ -15,7 +12,6 @@ def create_azure_openai_client(azure_endpoint, api_key, api_version):
         api_key=api_key,
         api_version=api_version,
     )
-
 
 def generate_customer_story(azureOpenAIClient, azure_deployment, content):
     # TODO invoke function for prompt compression using LLMLingua: https://github.com/microsoft/LLMLingua
@@ -44,7 +40,6 @@ def generate_customer_story(azureOpenAIClient, azure_deployment, content):
     file = open("customer_story.txt", "a")
     file.write(response["choices"][0]["message"]["content"])
     # TODO Return, then send story to sharepoint page
-
 
 def main():
 
@@ -75,13 +70,11 @@ def main():
     activityContent = ADO_Utilities.retrieve_activity_content(adoOrg, adoProject, wiql_api_version, headers, relatedWorkItemsIds)
     ado_metaprompt += activityContent
 
-
     # 5) Send Prompt to Azure OpenAI API
     # model = keyVaultSecretClient.get_secret("openai-model").value
     # generate_customer_story(azureOpenAIClient, azure_deployment, content)
 
     print(ado_metaprompt)
-
 
 if __name__ == "__main__":
     main()

@@ -19,7 +19,7 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
-from utils import ADO_Utilities, Secret_Manager
+from backend import ADO_Utilities, Secret_Manager
 
 # import semantic_kernel as sk
 # from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
@@ -740,14 +740,13 @@ async def handle_chat_request(request):
             function_response = function_to_call(**function_args)
 
             # Step 4: send the info for each tool call and its response to the model
-            messages.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": function_name,
-                    "content": function_response,
-                }
-            )  # extend conversation with function response
+            tool_call_obj = {
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "name": function_name,
+                "content": function_response,
+            }
+            messages.append(tool_call_obj)  # extend conversation with tool response
 
         second_response = await azure_openai_client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -757,6 +756,7 @@ async def handle_chat_request(request):
         second_bot_response = second_response_message.content
         messages.append({"role": "assistant", "content": second_bot_response})
         return format_non_streaming_response(second_response, {})
+    
     return format_non_streaming_response(response, {})
 
 
