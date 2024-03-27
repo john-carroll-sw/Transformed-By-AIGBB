@@ -2,9 +2,9 @@ import base64
 
 import requests
 
-from Classes.Comment import Comment
-from Classes.Activity import Activity
-from Classes.Engagement import Engagement
+from classes.Comment import Comment
+from classes.Activity import Activity
+from classes.Engagement import Engagement
 
 
 class ADO_Utilities:

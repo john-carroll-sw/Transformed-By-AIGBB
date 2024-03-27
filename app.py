@@ -4,7 +4,6 @@ import os
 import logging
 import uuid
 from dotenv import load_dotenv
-
 from quart import (
     Blueprint,
     Quart,
@@ -14,13 +13,24 @@ from quart import (
     send_from_directory,
     render_template
 )
-
 from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
-
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
+from utils import ADO_Utilities, Secret_Manager
+
+# import semantic_kernel as sk
+# from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+# from semantic_kernel.contents.chat_history import ChatHistory
+# from semantic_kernel.utils.settings import azure_openai_settings_from_dot_env_as_dict
+# from semantic_kernel.core_plugins import (
+#     MathPlugin,
+#     TextPlugin,
+#     TimePlugin,
+# )
+# from semantic_kernel.planners import SequentialPlanner
+
 
 bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
@@ -64,6 +74,9 @@ if DEBUG.lower() == "true":
 
 USER_AGENT = "GitHubSampleWebApp/AsyncAzureOpenAI/1.0.0"
 
+# Key Vault Settings
+KEY_VAULT_NAME = os.environ.get("KEY_VAULT_NAME")
+
 # On Your Data Settings
 DATASOURCE_TYPE = os.environ.get("DATASOURCE_TYPE", "AzureCognitiveSearch")
 SEARCH_TOP_K = os.environ.get("SEARCH_TOP_K", 5)
@@ -89,9 +102,9 @@ AZURE_SEARCH_STRICTNESS = os.environ.get("AZURE_SEARCH_STRICTNESS", SEARCH_STRIC
 
 # AOAI Integration Settings
 AZURE_OPENAI_RESOURCE = os.environ.get("AZURE_OPENAI_RESOURCE")
-AZURE_OPENAI_MODEL = os.environ.get("AZURE_OPENAI_MODEL")
+AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME")
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
-AZURE_OPENAI_KEY = os.environ.get("AZURE_OPENAI_KEY")
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_TEMPERATURE = os.environ.get("AZURE_OPENAI_TEMPERATURE", 0)
 AZURE_OPENAI_TOP_P = os.environ.get("AZURE_OPENAI_TOP_P", 1.0)
 AZURE_OPENAI_MAX_TOKENS = os.environ.get("AZURE_OPENAI_MAX_TOKENS", 1000)
@@ -99,7 +112,7 @@ AZURE_OPENAI_STOP_SEQUENCE = os.environ.get("AZURE_OPENAI_STOP_SEQUENCE")
 AZURE_OPENAI_SYSTEM_MESSAGE = os.environ.get("AZURE_OPENAI_SYSTEM_MESSAGE", "You are an AI assistant that helps people find information.")
 AZURE_OPENAI_PREVIEW_API_VERSION = os.environ.get("AZURE_OPENAI_PREVIEW_API_VERSION", MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION)
 AZURE_OPENAI_STREAM = os.environ.get("AZURE_OPENAI_STREAM", "true")
-AZURE_OPENAI_MODEL_NAME = os.environ.get("AZURE_OPENAI_MODEL_NAME", "gpt-35-turbo-16k") # Name of the model, e.g. 'gpt-35-turbo-16k' or 'gpt-4'
+AZURE_OPENAI_MODEL = os.environ.get("AZURE_OPENAI_MODEL", "gpt-35-turbo-16k") # Name of the model, e.g. 'gpt-35-turbo-16k' or 'gpt-4'
 AZURE_OPENAI_EMBEDDING_ENDPOINT = os.environ.get("AZURE_OPENAI_EMBEDDING_ENDPOINT")
 AZURE_OPENAI_EMBEDDING_KEY = os.environ.get("AZURE_OPENAI_EMBEDDING_KEY")
 AZURE_OPENAI_EMBEDDING_NAME = os.environ.get("AZURE_OPENAI_EMBEDDING_NAME", "")
@@ -169,7 +182,6 @@ AZURE_MLINDEX_URL_COLUMN = os.environ.get("AZURE_MLINDEX_URL_COLUMN")
 AZURE_MLINDEX_VECTOR_COLUMNS = os.environ.get("AZURE_MLINDEX_VECTOR_COLUMNS")
 AZURE_MLINDEX_QUERY_TYPE = os.environ.get("AZURE_MLINDEX_QUERY_TYPE")
 
-
 # Frontend Settings via Environment Variables
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").lower() == "true"
 CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
@@ -234,16 +246,16 @@ def init_openai_client(use_data=SHOULD_USE_DATA):
         endpoint = AZURE_OPENAI_ENDPOINT if AZURE_OPENAI_ENDPOINT else f"https://{AZURE_OPENAI_RESOURCE}.openai.azure.com/"
         
         # Authentication
-        aoai_api_key = AZURE_OPENAI_KEY
+        aoai_api_key = AZURE_OPENAI_API_KEY
         ad_token_provider = None
         if not aoai_api_key:
-            logging.debug("No AZURE_OPENAI_KEY found, using Azure AD auth")
+            logging.debug("No AZURE_OPENAI_API_KEY found, using Azure AD auth")
             ad_token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
 
         # Deployment
-        deployment = AZURE_OPENAI_MODEL
+        deployment = AZURE_OPENAI_DEPLOYMENT_NAME
         if not deployment:
-            raise Exception("AZURE_OPENAI_MODEL is required")
+            raise Exception("AZURE_OPENAI_DEPLOYMENT_NAME is required")
 
         # Default Headers
         default_headers = {
@@ -291,7 +303,6 @@ def init_cosmosdb_client():
         logging.debug("CosmosDB not configured")
         
     return cosmos_conversation_client
-
 
 def get_configured_data_source():
     data_source = {}
@@ -489,6 +500,11 @@ def read_system_prompt():
         system_prompt = file.read()
     return system_prompt
 
+def read_evaluation_prompt():
+    with open("evaluation_prompt.txt", "r") as file:
+        evaluation_prompt = file.read()
+    return evaluation_prompt
+
 def prepare_model_args(request_body):
     request_messages = request_body.get("messages", [])
     system_prompt = read_system_prompt()
@@ -516,7 +532,7 @@ def prepare_model_args(request_body):
         "top_p": float(AZURE_OPENAI_TOP_P),
         "stop": parse_multi_columns(AZURE_OPENAI_STOP_SEQUENCE) if AZURE_OPENAI_STOP_SEQUENCE else None,
         "stream": SHOULD_STREAM,
-        "model": AZURE_OPENAI_MODEL,
+        "model": AZURE_OPENAI_DEPLOYMENT_NAME,
     }
 
     if SHOULD_USE_DATA:
@@ -544,6 +560,137 @@ def prepare_model_args(request_body):
     
     return model_args
 
+# Function to increment the question counter
+def retrieve_data_from_ado(engagementWorkItemId):
+    ado_metaprompt = ''
+
+    keyVaultSecretClient = Secret_Manager.create_secret_client(KEY_VAULT_NAME)
+    pat, adoOrg, adoProject = Secret_Manager.retrieve_ado_secrets(keyVaultSecretClient)
+    headers = ADO_Utilities.create_ado_headers(pat)
+    wiql_api_version = "7.0"
+
+    # 1) Retrieve content from the Customer Engagement Work Item
+    engagementWIContent = ADO_Utilities.retrieve_engagement_content(adoOrg, adoProject, wiql_api_version, engagementWorkItemId, headers)
+    ado_metaprompt += engagementWIContent
+
+    # 2) Retrieve the ID's for the ADO work items that are children of the Customer Engagement Work Item
+    relatedWiUrl = ADO_Utilities.build_ado_url_by_wiql(adoOrg, adoProject, wiql_api_version)
+    relatedWorkItemsIds = ADO_Utilities.retrieve_related_work_item_ids(relatedWiUrl, headers, engagementWorkItemId)
+
+    # 3) Retrieve the content from the related ADO work items
+    activityContent = ADO_Utilities.retrieve_activity_content(adoOrg, adoProject, wiql_api_version, headers, relatedWorkItemsIds)
+    ado_metaprompt += activityContent
+
+    return ado_metaprompt
+
+async def evaluate_story():
+    system_prompt = read_evaluation_prompt()
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt
+        }
+    ]
+    azure_openai_client = init_openai_client()
+    response = await azure_openai_client.chat.completions.create(
+        model=AZURE_OPENAI_DEPLOYMENT_NAME,
+        messages=messages,
+        temperature=1,
+        max_tokens=4096,
+        top_p=0.95,
+    )
+    return response
+
+# List of tools available to the model
+def getTools():
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "retrieve_data_from_ado",
+                "description": "This function takes in an Engagement Work Item ID and retrieves the content from the work item and its related work items.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "engagementWorkItemId": {
+                            "type": "string",
+                            "description": "The Azure DevOps (ADO) Engagement Work Item ID",
+                        }
+                    },
+                    "required": ["engagementWorkItemId"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "evaluate_story",
+                "description": "Evaluates the Customer story. Returns a list of the follow-up questions to ask the user.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+async def handle_chat_request(request):
+    model_args = prepare_model_args(request)
+    azure_openai_client = init_openai_client()
+    messages = model_args.get("messages", [])
+
+    # Step 1: send the conversation and available functions to the model
+    response = await azure_openai_client.chat.completions.create(
+        model=AZURE_OPENAI_DEPLOYMENT_NAME,
+        messages=messages,
+        tools=getTools(),
+        tool_choice="auto",
+        temperature=1,
+        max_tokens=4096,
+        top_p=0.95,
+    )
+
+    response_message = response.choices[0].message
+    tool_calls = response_message.tool_calls
+
+    # Step 2: check if the model wanted to call a function/tool
+    if not tool_calls:
+        bot_response = response_message.content
+        messages.append({"role": "assistant", "content": bot_response})
+    else:
+        messages.append(response_message)  # extend conversation with assistant's reply
+        available_functions = { "retrieve_data_from_ado": retrieve_data_from_ado }
+        
+        for tool_call in tool_calls:
+
+            # Note: the JSON response may not always be valid; be sure to handle errors
+            function_name = tool_call.function.name
+            if function_name not in available_functions:
+                return "Function " + function_name + " does not exist"
+        
+            # Step 3: call the function with arguments if any
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(tool_call.function.arguments)
+            function_response = function_to_call(**function_args)
+
+            # Step 4: send the info for each tool call and its response to the model
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            )  # extend conversation with function response
+
+        second_response = await azure_openai_client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT_NAME,
+            messages=messages,
+        )  # get a new response from the model where it can see the function response
+        second_response_message = second_response.choices[0].message
+        second_bot_response = second_response_message.content
+        messages.append({"role": "assistant", "content": second_bot_response})
+        return format_non_streaming_response(second_response, {})
+    return format_non_streaming_response(response, {})
+
+
 async def send_chat_request(request):
     model_args = prepare_model_args(request)
 
@@ -556,6 +703,7 @@ async def send_chat_request(request):
         raise e
 
     return response
+
 
 async def complete_chat_request(request_body):
     response = await send_chat_request(request_body)
@@ -575,15 +723,18 @@ async def stream_chat_request(request_body):
 
 async def conversation_internal(request_body):
     try:
-        if SHOULD_STREAM:
-            result = await stream_chat_request(request_body)
-            response = await make_response(format_as_ndjson(result))
-            response.timeout = None
-            response.mimetype = "application/json-lines"
-            return response
-        else:
-            result = await complete_chat_request(request_body)
-            return jsonify(result)
+        result = await handle_chat_request(request_body)
+        return jsonify(result)
+
+        # if SHOULD_STREAM:
+        #     result = await stream_chat_request(request_body)
+        #     response = await make_response(format_as_ndjson(result))
+        #     response.timeout = None
+        #     response.mimetype = "application/json-lines"
+        #     return response
+        # else:
+        #     result = await complete_chat_request(request_body)
+        #     return jsonify(result)
     
     except Exception as ex:
         logging.exception(ex)
@@ -957,7 +1108,7 @@ async def generate_title(conversation_messages):
     try:
         azure_openai_client = init_openai_client(use_data=False)
         response = await azure_openai_client.chat.completions.create(
-            model=AZURE_OPENAI_MODEL,
+            model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=messages,
             temperature=0.7,
             top_p=0.7,
