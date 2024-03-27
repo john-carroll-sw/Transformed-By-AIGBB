@@ -1,7 +1,8 @@
 import copy
 import json
-import os
 import logging
+import os
+import requests
 import uuid
 from dotenv import load_dotenv
 from quart import (
@@ -76,6 +77,10 @@ USER_AGENT = "GitHubSampleWebApp/AsyncAzureOpenAI/1.0.0"
 
 # Key Vault Settings
 KEY_VAULT_NAME = os.environ.get("KEY_VAULT_NAME")
+
+# Bing Search Settings
+BING_SEARCH_SUBSCRIPTION_KEY = os.environ.get("BING_SEARCH_SUBSCRIPTION_KEY")
+BING_SEARCH_URL = os.environ.get("BING_SEARCH_URL", "https://api.bing.microsoft.com/v7.0/search")
 
 # On Your Data Settings
 DATASOURCE_TYPE = os.environ.get("DATASOURCE_TYPE", "AzureCognitiveSearch")
@@ -561,7 +566,6 @@ def prepare_model_args(request_body):
     
     return model_args
 
-# Function to increment the question counter
 def retrieve_data_from_ado(engagementWorkItemId):
     ado_metaprompt = ''
 
@@ -615,6 +619,23 @@ def evaluate_story(story):
     
     return prompt
 
+def search_bing(query):
+    headers = {"Ocp-Apim-Subscription-Key": BING_SEARCH_SUBSCRIPTION_KEY}
+    params = {"q": query, "textDecorations": False }
+    response = requests.get(BING_SEARCH_URL, headers=headers, params=params)
+    response.raise_for_status()
+    search_results = response.json()
+
+    output = []
+
+    for result in search_results['webPages']['value']:
+        output.append({
+            'title': result['name'],
+            'link': result['url'],
+            'snippet': result['snippet']
+        })
+
+    return json.dumps(output)
 
 # List of tools available to the model
 def get_tools():
@@ -652,6 +673,23 @@ def get_tools():
                     "required": ["story"],
                 },
             },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_bing",
+                "description": "Searches bing to get up to date information from the web",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query",
+                        }
+                    },
+                    "required": ["query"],
+                }
+            }
         }
     ]
 
@@ -680,14 +718,18 @@ async def handle_chat_request(request):
         messages.append({"role": "assistant", "content": bot_response})
     else:
         messages.append(response_message)  # extend conversation with assistant's reply
+
+        # Map of function names to the actual functions
         available_functions = { 
             "retrieve_data_from_ado": retrieve_data_from_ado, 
-            "evaluate_story": evaluate_story
+            "evaluate_story": evaluate_story,
+            "search_bing": search_bing
         }
         
         for tool_call in tool_calls:
 
             # Note: the JSON response may not always be valid; be sure to handle errors
+            # Check if the function name is an available function
             function_name = tool_call.function.name
             if function_name not in available_functions:
                 return "Function " + function_name + " does not exist"
