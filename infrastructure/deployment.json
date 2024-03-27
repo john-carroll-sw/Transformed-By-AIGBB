@@ -134,13 +134,13 @@
                 "description": "Name of Azure OpenAI Resource"
             }
         },
-        "AzureOpenAIModel": {
+        "AzureOpenAIDeploymentName": {
             "type": "string",
             "metadata": {
                 "description": "Azure OpenAI Model Deployment Name"
             }
         },
-        "AzureOpenAIModelName": {
+        "AzureOpenAIModel": {
             "type": "string",
             "defaultValue": "gpt-35-turbo",
             "metadata": {
@@ -445,16 +445,16 @@
                             "value": "[parameters('AzureOpenAIResource')]"
                         },
                         {
-                            "name": "AZURE_OPENAI_MODEL",
-                            "value": "[parameters('AzureOpenAIModel')]"
+                            "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
+                            "value": "[parameters('AzureOpenAIDeploymentName')]"
                         },
                         {
                             "name": "AZURE_OPENAI_KEY",
                             "value": "[parameters('AzureOpenAIKey')]"
                         },
                         {
-                            "name": "AZURE_OPENAI_MODEL_NAME",
-                            "value": "[parameters('AzureOpenAIModelName')]"
+                            "name": "AZURE_OPENAI_MODEL",
+                            "value": "[parameters('AzureOpenAIModel')]"
                         },
                         {
                             "name": "AZURE_OPENAI_TEMPERATURE",
