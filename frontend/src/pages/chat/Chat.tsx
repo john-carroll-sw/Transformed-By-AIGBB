@@ -1,6 +1,9 @@
+import * as React from 'react';
+
 import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
 import { CommandBarButton, IconButton, Dialog, DialogType, Stack } from "@fluentui/react";
 import { SquareRegular, ShieldLockRegular, ErrorCircleRegular } from "@fluentui/react-icons";
+import ChipsArray from "../../components/Chips/ChipArray";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm'
@@ -34,6 +37,7 @@ import { QuestionInput } from "../../components/QuestionInput";
 import { ChatHistoryPanel } from "../../components/ChatHistory/ChatHistoryPanel";
 import { AppStateContext } from "../../state/AppProvider";
 import { useBoolean } from "@fluentui/react-hooks";
+import { ChipData } from "../../components/Chips/ChipData";
 
 const enum messageStatus {
     NotRunning = "Not Running",
@@ -74,6 +78,32 @@ const Chat = () => {
 
     const [ASSISTANT, TOOL, ERROR] = ["assistant", "tool", "error"]
 
+    const [chipData] = React.useState<readonly ChipData[]>([
+        { key: 0, label: 'Give me the current story' },
+        { key: 1, label: 'Evaluate the story' },
+        { key: 2, label: 'Start over the chat' },
+        // { key: 3, label: 'Search Bing for company profile' },
+        // { key: 4, label: 'Publish to SharePoint' },
+    ]);
+
+    const handlePromptSuggestionClick = (clickedSuggestion: ChipData) => {
+        switch (clickedSuggestion.label) {
+            case 'Give me the current story':
+                makeApiRequestWithoutCosmosDB('Can you give me the current customer story?', 
+                    appStateContext?.state.currentChat?.id ? appStateContext?.state.currentChat?.id : undefined);
+                    break;
+            case 'Evaluate the story':
+                makeApiRequestWithoutCosmosDB('Can you evaluate the customer story?', 
+                    appStateContext?.state.currentChat?.id ? appStateContext?.state.currentChat?.id : undefined);
+                break;
+            case 'Start over the chat':
+                newChat();
+                break;
+            default:
+                break;
+        }
+      };
+
     useEffect(() => {
         if (appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.Working  
             && appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured
@@ -91,7 +121,7 @@ const Chat = () => {
     const handleErrorDialogClose = () => {
         toggleErrorDialog()
         setTimeout(() => {
-            setErrorMsg(null)
+            setErrorMsg(null);
         }, 500);
     }
 
@@ -753,7 +783,8 @@ const Chat = () => {
                                 </Stack>
                             )}
                             <Stack>
-                                {appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && <CommandBarButton
+                                {appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && 
+                                <CommandBarButton
                                     role="button"
                                     styles={{
                                         icon: {
@@ -807,6 +838,9 @@ const Chat = () => {
                                 >
                                 </Dialog>
                             </Stack>
+                            {messages && messages.length >= 3 && !isLoading && (
+                                <ChipsArray chipData={chipData} handleClick={(clickedChip) => {handlePromptSuggestionClick(clickedChip)}}/>
+                            )}
                             <QuestionInput
                                 clearOnSend
                                 placeholder="Enter your input here..."
