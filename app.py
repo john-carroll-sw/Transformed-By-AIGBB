@@ -633,9 +633,9 @@ def evaluate_story(story):
     response = azure_openai_client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT_NAME,
         messages=messages,
-        temperature=1,
-        max_tokens=4096,
+        temperature=0.3,
         top_p=0.95,
+        max_tokens=4096,
     )
 
     follow_up_questions = response.choices[0].message.content
@@ -690,7 +690,7 @@ def get_tools():
             "type": "function",
             "function": {
                 "name": "evaluate_story",
-                "description": "Evaluates the Customer story. Returns a list of the follow-up questions to ask the user.",
+                "description": "Evaluates the Customer story. Returns a list of the follow-up questions to ask the user. ",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -722,6 +722,7 @@ def get_tools():
         }
     ]
 
+# TODO make this function into a recursive function to handle nested tool calls until no more tool calls are needed
 async def handle_chat_request(request):
     model_args = prepare_model_args(request)
     azure_openai_client = init_openai_client()
@@ -733,19 +734,20 @@ async def handle_chat_request(request):
         messages=messages,
         tools=get_tools(),
         tool_choice="auto",
-        temperature=1,
-        max_tokens=4096,
+        temperature=0.3,
         top_p=0.95,
+        max_tokens=4096,
     )
 
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
 
     # Step 2: check if the model wanted to call a function/tool
-    if not tool_calls:
-        bot_response = response_message.content
-        messages.append({"role": "assistant", "content": bot_response})
-    else:
+    # if not tool_calls:
+    #     bot_response = response_message.content
+    #     messages.append({"role": "assistant", "content": bot_response})
+    # else:
+    if tool_calls:
         messages.append(response_message)  # extend conversation with assistant's reply
 
         # Map of function names to the actual functions
@@ -779,7 +781,10 @@ async def handle_chat_request(request):
 
         second_response = await azure_openai_client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=messages
+            messages=messages,
+            temperature=0.3,
+            top_p=0.95,
+            max_tokens=4096,
         )  # get a new response from the model where it can see the function response
         second_response_message = second_response.choices[0].message
         second_bot_response = second_response_message.content

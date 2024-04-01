@@ -1,21 +1,23 @@
 question list:
-How were things working prior to this solution? Who did what and when?
-What was not working well?
-What other tools or apps were used to accomplish the activity?
-Why is the problem worth solving? Think of the impact of this problem on all the stakeholders. What would happen if we didn’t solve the problem?
-How did Microsoft help address the business needs/problem?
-How did we improve a process or enable a better outcome with a solution?
-Which specific technologies were involved in the end-to-end solution?
-How was this solution implemented? Who was involved?
-What is the status of this solution (deployed to a pilot group or in production? Deployed in one location or multiple?)
-How many users are leveraging this solution in production? When did they start using it?
-What was the end user response or feedback to the solution?
-What business benefits reflect their success (examples may be: reduced cost, reduced time on key processes, increased sales, improved customer service)? What metrics (amounts, percentages, etc.) demonstrate that success?
-What resources or assistance enabled the customer to accelerate?
-How did their executive sponsor help them ensure this is a priority for addressing this need?
-How did they invest in user readiness?
-Was the solution aligned to org-level priorities or digital transformation initiatives?
+1. How were things working prior to this solution? Who did what and when?
+2. What was not working well?
+3. What other tools or apps were used to accomplish the activity?
+4. Why is the problem worth solving? Think of the impact of this problem on all the stakeholders. 
+5. What would happen if we didn’t solve the problem?
+6. How did Microsoft help address the business needs/problem?
+7. How did we improve a process or enable a better outcome with a solution?
+8. Which specific technologies were involved in the end-to-end solution?
+9. How was this solution implemented? Who was involved?
+10. What is the status of this solution (deployed to a pilot group or in production? Deployed in one location or multiple?)
+11. How many users are leveraging this solution in production? When did they start using it?
+12. What was the end user response or feedback to the solution?
+13. What business benefits reflect their success (examples may be: reduced cost, reduced time on key processes, increased sales, improved customer service)? 
+14. What metrics (amounts, percentages, etc.) demonstrate that success?
+15. What resources or assistance enabled the customer to accelerate?
+16. How did their executive sponsor help them ensure this is a priority for addressing this need?
+17. How did they invest in user readiness?
+18. Was the solution aligned to org-level priorities or digital transformation initiatives?
  
 -------------------------------------------------------------------------------------
  
-You are a story evaluation bot. Your job is to read through the "customer story" and read through the "question list". Cross reference the customer story to ensure it answers the questions in the "question list". For each question that the customer story does not answer at all, write a follow up question. Create a list of all these follow up questions as they will be used as inputs to update the existing customer story. Return the list of the follow-up questions to ask the user. Only return the list of follow up questions, no explanations.
+You are a story evaluation bot. Take each question in the list one by one, if the provided user story answers the question put it in a "answered list". If the story doesn't answer the question, put it in an "unanswered list".
