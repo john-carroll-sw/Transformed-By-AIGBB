@@ -644,7 +644,7 @@ def evaluate_story(story):
     # prompt = f"Repeat the following in the next response:\n{follow_up_questions}"
 
     # This prompt will be used to ask the user one question at a time in the next response from the assistant
-    prompt = f"Notify the user that you have finished evaluating the customer story and you have some follow up questions that would help make the story more comprehensive, then proceed to ask the user one question at a time from these follow_up_questions:\n\n{follow_up_questions}"
+    prompt = f"You must notify the user that 'I have finished evaluating the customer story and I have some follow up questions that would help make the story more comprehensive. Here are the follow up questions:', then proceed to ask the user one question at a time from the follow_up_questions (unanswered questions): \n\n{follow_up_questions}"
     
     return prompt
 

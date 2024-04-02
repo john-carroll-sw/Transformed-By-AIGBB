@@ -16,14 +16,16 @@ export default function ChipsArray({ chipData, handleClick }: ChipsArrayProps) {
         <Paper
             sx={{
                 display: 'flex',
-                flexWrap: 'wrap',
+                flexWrap: 'wrap-reverse',
+                alignContent: 'flex-start',
                 listStyle: 'none',
                 p: 0.5,
                 m: 0,
-                height: '9rem',
+                height: '14rem',
+                width: '15rem',
                 position: 'absolute',
                 right: '0',
-                top: '-172px',
+                top: '-15rem',
                 bottom: '0',
                 backgroundColor: 'transparent !important'
             }}
@@ -32,7 +34,12 @@ export default function ChipsArray({ chipData, handleClick }: ChipsArrayProps) {
         >
             {chipData.map((data) => {
                 return (
-                    <ListItem key={data.key}>
+                    <ListItem key={data.key}
+                        component="li"
+                        sx={{
+                            padding: '2px 16px'
+                        }}
+                    >
                         <Chip
                             label={data.label}
                             onClick={() => handleClick(data)}

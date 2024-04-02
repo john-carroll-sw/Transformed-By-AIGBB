@@ -693,7 +693,7 @@ const Chat = () => {
       
           initiateChat();
         }
-      }, []);
+    }, []);
 
     return (
         <div className={styles.container} role="main">
@@ -709,7 +709,7 @@ const Chat = () => {
                     <h2 className={styles.chatEmptyStateSubtitle} style={{ fontSize: "20px" }}><strong>If you deployed in the last 10 minutes, please wait and reload the page after 10 minutes.</strong></h2>
                 </Stack>
             ) : (
-                <Stack horizontal className={styles.chatRoot}>
+                <Stack horizontal className={`${styles.chatRoot} ${styles.fadeIn}`}>
                     <div className={styles.chatContainer}>
                         {!messages || messages.length < 1 ? (
                             <Stack className={styles.chatEmptyState}>
@@ -722,7 +722,7 @@ const Chat = () => {
                                 <h2 className={styles.chatEmptyStateSubtitle}>{ui?.chat_description}</h2>
                             </Stack>
                         ) : (
-                            <div className={styles.chatMessageStream} style={{ marginBottom: isLoading ? "40px" : "0px" }} role="log">
+                            <div className={`${styles.chatMessageStream} ${styles.fadeIn}`} style={{ marginBottom: isLoading ? "40px" : "0px" }} role="log">
                                 {messages.map((answer, index) => (
                                     <>
                                         {answer.role === "user" ? (
