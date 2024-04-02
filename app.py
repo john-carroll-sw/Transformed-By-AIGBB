@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import logging
@@ -216,7 +217,6 @@ if USE_LLMLINGUA_PROMPT_COMPRESSION:
         model_config={}, # Configuration for the Huggingface model
         open_api_config={}, # Configuration for OpenAI Embedding
     )
-
 
 def should_use_data():
     global DATASOURCE_TYPE
@@ -633,7 +633,7 @@ def evaluate_story(story):
     response = azure_openai_client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT_NAME,
         messages=messages,
-        temperature=0.3,
+        temperature=0.1,
         top_p=0.95,
         max_tokens=4096,
     )
@@ -722,24 +722,30 @@ def get_tools():
         }
     ]
 
-# TODO make this function into a recursive function to handle nested tool calls until no more tool calls are needed
-async def handle_chat_request(request):
+def get_available_functions():
+    return { 
+        "retrieve_data_from_ado": retrieve_data_from_ado, 
+        "evaluate_story": evaluate_story,
+        "search_bing": search_bing
+    }
+
+async def send_chat_request_tool(request):
     model_args = prepare_model_args(request)
     azure_openai_client = init_openai_client()
     messages = model_args.get("messages", [])
 
     # Step 1: send the conversation and available functions to the model
-    response = await azure_openai_client.chat.completions.create(
+    first_response = await azure_openai_client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT_NAME,
         messages=messages,
         tools=get_tools(),
         tool_choice="auto",
-        temperature=0.3,
+        temperature=0.1,
         top_p=0.95,
         max_tokens=4096,
     )
 
-    response_message = response.choices[0].message
+    response_message = first_response.choices[0].message
     tool_calls = response_message.tool_calls
 
     # Step 2: check if the model wanted to call a function/tool
@@ -751,11 +757,7 @@ async def handle_chat_request(request):
         messages.append(response_message)  # extend conversation with assistant's reply
 
         # Map of function names to the actual functions
-        available_functions = { 
-            "retrieve_data_from_ado": retrieve_data_from_ado, 
-            "evaluate_story": evaluate_story,
-            "search_bing": search_bing
-        }
+        available_functions = get_available_functions()
         
         for tool_call in tool_calls:
 
@@ -782,17 +784,103 @@ async def handle_chat_request(request):
         second_response = await azure_openai_client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=messages,
-            temperature=0.3,
+            temperature=0.1,
             top_p=0.95,
             max_tokens=4096,
         )  # get a new response from the model where it can see the function response
+
         second_response_message = second_response.choices[0].message
         second_bot_response = second_response_message.content
         messages.append({"role": "assistant", "content": second_bot_response})
-        return format_non_streaming_response(second_response, {})
+        return second_response
     
-    return format_non_streaming_response(response, {})
+    return first_response
 
+async def send_chat_request_tool_stream(request):
+    model_args = prepare_model_args(request)
+    azure_openai_client = init_openai_client()
+    messages = model_args.get("messages", [])
+    
+    # Step 1: send the conversation and available functions to the model
+    stream_response1 = await azure_openai_client.chat.completions.create(
+        model=AZURE_OPENAI_DEPLOYMENT_NAME,
+        messages=messages,
+        tools=get_tools(),
+        tool_choice="auto",
+        temperature=0.1,
+        top_p=0.95,
+        max_tokens=4096,
+        stream=True
+    )
+
+    stream_response1_list = [item async for item in stream_response1]
+
+    # Accumulator for tool calls to process later; Accumulator for the full assistant's content
+    tool_calls = []
+    full_delta_content = ""
+
+    for chunk in stream_response1_list:
+        delta = chunk.choices[0].delta if chunk.choices and chunk.choices[0].delta is not None else None
+
+        if delta and delta.content:
+            full_delta_content += delta.content
+            
+        elif delta and delta.tool_calls:
+            tc_chunk_list = delta.tool_calls
+            for tc_chunk in tc_chunk_list:
+                if len(tool_calls) <= tc_chunk.index:
+                    tool_calls.append({"id": "", "type": "function", "function": {"name": "", "arguments": ""}})
+                tc = tool_calls[tc_chunk.index]
+
+                if tc_chunk.id:
+                    tc["id"] += tc_chunk.id
+                if tc_chunk.function.name:
+                    tc["function"]["name"] += tc_chunk.function.name
+                if tc_chunk.function.arguments:
+                    tc["function"]["arguments"] += tc_chunk.function.arguments
+
+    # Step 2: check if the model wanted to call a function
+    if not tool_calls and full_delta_content:
+        async def list_to_stream():
+            for item in stream_response1_list:
+                yield item
+
+        return list_to_stream()
+    elif tool_calls:
+        messages.append({ "role": "assistant", "tool_calls": tool_calls })
+        
+        # Map of function names to the actual functions
+        available_functions = get_available_functions() 
+
+        for tool_call in tool_calls:
+
+            # Note: the JSON response may not always be valid; be sure to handle errors
+            function_name = tool_call['function']['name']
+            if function_name not in available_functions:
+                return "Function " + function_name + " does not exist"
+        
+            # Step 3: call the function with arguments if any
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(tool_call['function']['arguments'])
+            function_response = function_to_call(**function_args)
+
+            # Step 4: send the info for each function call and function response to the model
+            messages.append(
+                {
+                    "tool_call_id": tool_call['id'],
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            )  # extend conversation with function response
+
+        stream_response2 = await azure_openai_client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT_NAME,
+            messages=messages,
+            temperature=0,  # Adjust the variance by changing the temperature value (default is 0.8)
+            stream=True,
+        )
+        return stream_response2
 
 async def send_chat_request(request):
     model_args = prepare_model_args(request)
@@ -809,7 +897,8 @@ async def send_chat_request(request):
 
 
 async def complete_chat_request(request_body):
-    response = await send_chat_request(request_body)
+    # response = await send_chat_request(request_body)
+    response = await send_chat_request_tool(request_body)
     history_metadata = request_body.get("history_metadata", {})
 
     return format_non_streaming_response(response, history_metadata)
@@ -820,24 +909,34 @@ async def stream_chat_request(request_body):
 
     async def generate():
         async for completionChunk in response:
+            await asyncio.sleep(0.1) # smooth out the stream
+            yield format_stream_response(completionChunk, history_metadata)
+
+    return generate()
+
+async def stream_chat_request_with_func(request_body):
+    response = await send_chat_request_tool_stream(request_body)
+    history_metadata = request_body.get("history_metadata", {})
+
+    async def generate():
+        async for completionChunk in response:
+            await asyncio.sleep(0.1) # smooth out the stream
             yield format_stream_response(completionChunk, history_metadata)
 
     return generate()
 
 async def conversation_internal(request_body):
     try:
-        result = await handle_chat_request(request_body)
-        return jsonify(result)
-
-        # if SHOULD_STREAM:
-        #     result = await stream_chat_request(request_body)
-        #     response = await make_response(format_as_ndjson(result))
-        #     response.timeout = None
-        #     response.mimetype = "application/json-lines"
-        #     return response
-        # else:
-        #     result = await complete_chat_request(request_body)
-        #     return jsonify(result)
+        if SHOULD_STREAM:
+            # result = await stream_chat_request(request_body)
+            result = await stream_chat_request_with_func(request_body)
+            response = await make_response(format_as_ndjson(result))
+            response.timeout = None
+            response.mimetype = "application/json-lines"
+            return response
+        else:
+            result = await complete_chat_request(request_body)
+            return jsonify(result)
     
     except Exception as ex:
         logging.exception(ex)

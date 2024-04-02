@@ -81,7 +81,7 @@ const Chat = () => {
     const [chipData] = React.useState<readonly ChipData[]>([
         { key: 0, label: 'Give me the current story' },
         { key: 1, label: 'Evaluate the story' },
-        { key: 2, label: 'Start over the chat' },
+        { key: 2, label: 'Start the chat over' },
         // { key: 3, label: 'Search Bing for company profile' },
         // { key: 4, label: 'Publish to SharePoint' },
     ]);
@@ -96,7 +96,7 @@ const Chat = () => {
                 makeApiRequestWithoutCosmosDB('Can you evaluate the customer story?', 
                     appStateContext?.state.currentChat?.id ? appStateContext?.state.currentChat?.id : undefined);
                 break;
-            case 'Start over the chat':
+            case 'Start the chat over':
                 newChat();
                 break;
             default:
