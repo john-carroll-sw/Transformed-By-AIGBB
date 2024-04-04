@@ -71,6 +71,10 @@ Contributions are welcome! If you would like to contribute to this project, plea
 4. Push to the branch: `git push origin <branch-name>`
 5. Submit a pull request
 
+## Acknowledgements
+
+This project was forked from [Microsoft's sample-app-aoai-chatGPT](https://github.com/microsoft/sample-app-aoai-chatGPT.git). (Under [MIT License](LICENSE) agreement)
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
