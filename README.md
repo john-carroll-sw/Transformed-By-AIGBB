@@ -38,7 +38,7 @@ To use this project, follow these steps:
    - Optional: 
      - Navigate to the parent of the project directory: `cd ..\<project-directory>`
      - Open in VS Code: `code <project-folder-name>`
-2. Copy `.env.sample` to a new file called `.env` and configure the settings.
+2. Copy `.env.sample` to a new file called `.env` and configure the settings: `copy .env.sample .env`
     
     These variables are required:
     - `AZURE_OPENAI_RESOURCE`
